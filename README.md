@@ -1,0 +1,2 @@
+# birthday-reminder
+Learning Rust
