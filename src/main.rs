@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use std::{fs::File, io::{ErrorKind, Write, Read}, collections::HashMap};
+use std::{fs::File, io::{ErrorKind, Write, Read}, collections::HashMap, process::Command};
 
 #[derive(Debug)]
 struct Date {
@@ -37,18 +37,22 @@ impl Date {
     fn format(&self) -> String {
         format!("{}/{}/{}", self.month, self.day, self.year)
     }
+
+    fn as_line(&self, name: &String) -> String {
+        format!("{} <--> {}", name, self.format())
+    }
 }
 
 fn read_content(file_name: &str) -> String {
     let mut file: File = File::open(file_name)
-        .expect("Problem occured while creating File object...");
+        .expect("Problem occured while creating the File object...");
     let mut content: String = String::new();
     file.read_to_string(&mut content);
     return content;
 }
 
 fn open_file(file_name: &str) -> File {
-    let file_res = File::options().append(true).open(file_name);
+    let file_res = File::options().write(true).open(file_name);
     let file = match file_res {
         Ok(file) => file,
         Err(error) => match error.kind() {
@@ -86,12 +90,11 @@ fn get_input() -> String {
 }
 
 fn write_to_file(map: &HashMap<String, Date>, file: &mut File) {
-    file.set_len(0);
     let mut lines: Vec<String> = Vec::new();
     for (name, date) in map {
         let date_as_string: String = date.format();
         let line: String = format!("{} -> {}\n", name, date_as_string);
-        file.write_all(line.as_bytes());
+        file.write(line.as_bytes());
     }
 }
 
@@ -167,13 +170,36 @@ fn main() {
             "2" => {
                 println!("{}", 
                     color_string(
-                        "Please enter the name of the person you want to check:",
+                        "Please enter the name of the person you want to check (\"print\" to print the names):",
                         255, 0, 255
                     ),
                 );
                 let name: String = get_input();
-                let date: &Date = &dates[&name];
-                println!("{name}'s birthday is {:?}🎉", date);
+                if name == "print" {
+                    println!("\x1bc{}", color_string("Names & Dates", 0, 150, 255)); // Clear the terminal
+                    for (name, date) in &dates {
+                        let line: String = date.as_line(&name);
+                        println!("{}", color_string(line.as_str(), 255, 255, 0));
+                    }
+                    continue;
+                }
+                else {
+                    match dates.get(&name) {
+                        Some(date) => {
+                            println!("{}",
+                                     color_string(
+                                         format!("{name}'s birthday is \"{}\"🎉", date.format()).as_str(), 
+                                         0, 255, 255)
+                                     );
+                        },
+                        None => {
+                            println!("The name is not in the map, restarting...");
+                            // Then, we'll ask it again... Since the choice variable is not
+                            // changed, we can just restart the loop...
+                            continue;
+                        }
+                    }
+                }
             },
             "3" => {
                 println!("{}", 
